@@ -314,39 +314,63 @@ class ForceLab {
     }
 
     drawFootballField() {
-        // Campo da calcio
-        this.ctx.fillStyle = '#228B22';
-        this.ctx.fillRect(50, 300, this.canvas.width - 100, 80);
-        
-        // Linee campo
-        this.ctx.strokeStyle = 'white';
-        this.ctx.lineWidth = 3;
-        this.ctx.strokeRect(50, 300, this.canvas.width - 100, 80);
-        
-        // Porta
-        this.ctx.strokeStyle = 'white';
-        this.ctx.lineWidth = 4;
-        this.ctx.strokeRect(this.canvas.width - 80, 320, 30, 40);
-        
-        // Palo trasversale
+    // Campo da calcio
+    this.ctx.fillStyle = '#228B22';
+    this.ctx.fillRect(50, 300, this.canvas.width - 100, 80);
+    
+    // Linee campo
+    this.ctx.strokeStyle = 'white';
+    this.ctx.lineWidth = 3;
+    this.ctx.strokeRect(50, 300, this.canvas.width - 100, 80);
+    
+    // Porta sulla destra - CORRETTA
+    this.ctx.strokeStyle = 'white';
+    this.ctx.lineWidth = 4;
+    
+    // Pali verticali
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.canvas.width - 80, 300);
+    this.ctx.lineTo(this.canvas.width - 80, 320);
+    this.ctx.moveTo(this.canvas.width - 50, 300);
+    this.ctx.lineTo(this.canvas.width - 50, 320);
+    this.ctx.stroke();
+    
+    // Palo trasversale
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.canvas.width - 80, 300);
+    this.ctx.lineTo(this.canvas.width - 50, 300);
+    this.ctx.stroke();
+    
+    // Base porta
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.canvas.width - 80, 320);
+    this.ctx.lineTo(this.canvas.width - 50, 320);
+    this.ctx.stroke();
+    
+    // Rete
+    this.ctx.strokeStyle = 'lightgray';
+    this.ctx.lineWidth = 1;
+    for(let i = 0; i < 4; i++) {
         this.ctx.beginPath();
-        this.ctx.moveTo(this.canvas.width - 80, 320);
-        this.ctx.lineTo(this.canvas.width - 50, 320);
-        this.ctx.stroke();
-        
-        // Pallone al centro
-        this.ctx.fillStyle = '#000000';
-        this.ctx.beginPath();
-        this.ctx.arc(this.canvas.width/2, 340, 12, 0, 2 * Math.PI);
-        this.ctx.fill();
-        
-        // Pentagoni sul pallone
-        this.ctx.strokeStyle = 'white';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.arc(this.canvas.width/2, 340, 12, 0, 2 * Math.PI);
+        this.ctx.moveTo(this.canvas.width - 75 + i*5, 300);
+        this.ctx.lineTo(this.canvas.width - 75 + i*5, 320);
         this.ctx.stroke();
     }
+    
+    // Pallone al centro
+    this.ctx.fillStyle = '#000000';
+    this.ctx.beginPath();
+    this.ctx.arc(this.canvas.width/2, 340, 12, 0, 2 * Math.PI);
+    this.ctx.fill();
+    
+    // Pentagoni sul pallone
+    this.ctx.strokeStyle = 'white';
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.arc(this.canvas.width/2, 340, 12, 0, 2 * Math.PI);
+    this.ctx.stroke();
+}
+
 
     drawBasketballCourt() {
         // Campo da basket
@@ -630,105 +654,175 @@ class ForceLab {
     }
 
     simulateBasketballShot() {
-        let time = 0;
-        let ballX = this.canvas.width - 80 - (this.shootDistance * 30);
-        let ballY = 340;
-        let targetX = this.canvas.width - 80;
-        let targetY = 285;
+    let time = 0;
+    let ballX = this.canvas.width - 80 - (this.shootDistance * 30);
+    let ballY = 340;
+    let targetX = this.canvas.width - 80;
+    let targetY = 285;
+    
+    // Calcola velocità iniziale necessaria per raggiungere il canestro
+    const dx = targetX - ballX;
+    const dy = targetY - ballY;
+    const distance = Math.sqrt(dx*dx + dy*dy);
+    
+    // Angolo ottimale per il tiro (45° modificato per la distanza)
+    const optimalAngle = Math.PI/4 + (this.shootDistance - 3) * 0.1;
+    const initialSpeed = Math.sqrt(distance * this.gravity / Math.sin(2 * optimalAngle));
+    
+    const vx = initialSpeed * Math.cos(optimalAngle);
+    const vy = initialSpeed * Math.sin(optimalAngle); // POSITIVO = verso l'alto
+    
+    const animate = () => {
+        this.drawSportEnvironment();
         
-        // Calcola velocità iniziale necessaria
-        const distance = Math.sqrt(Math.pow(targetX - ballX, 2) + Math.pow(targetY - ballY, 2));
-        const angle = Math.atan2(targetY - ballY, targetX - ballX);
-        const initialVelocity = Math.sqrt(distance * this.gravity / Math.sin(2 * Math.abs(angle)));
+        time += 0.05;
         
-        const vx = initialVelocity * Math.cos(angle);
-        const vy = initialVelocity * Math.sin(angle);
+        // Posizione con resistenza aria - FISICA CORRETTA
+        const currentVx = vx * (1 - this.airResistance * time);
+        const currentVy = vy - this.gravity * time; // Gravità sottrae velocità verticale
         
-        const animate = () => {
-            this.drawSportEnvironment();
-            
-            time += 0.05;
-            
-            // Posizione con resistenza aria
-            const currentX = ballX + vx * time * (1 - this.airResistance * time);
-            const currentY = ballY + vy * time - 0.5 * this.gravity * time * time;
-            
-            // Disegna palla
-            this.ctx.fillStyle = '#FF8C00';
-            this.ctx.beginPath();
-            this.ctx.arc(currentX, currentY, 12, 0, 2 * Math.PI);
-            this.ctx.fill();
-            
-            // Vettore forza
-            this.ctx.strokeStyle = 'red';
-            this.ctx.lineWidth = 3;
-            this.ctx.beginPath();
-            this.ctx.moveTo(currentX, currentY);
-            this.ctx.lineTo(currentX + vx/5, currentY + vy/5);
-            this.ctx.stroke();
-            
-            // Reset quando esce dal campo
-            if(currentX > this.canvas.width || currentY > 400) {
-                time = 0;
-            }
-            
-            this.updateResults({
-                gravita: this.gravity.toFixed(1),
-                distanza: this.shootDistance.toFixed(1),
-                velocita_iniziale: initialVelocity.toFixed(1),
-                resistenza_aria: this.airResistance.toFixed(3),
-                angolo: (angle * 180 / Math.PI).toFixed(1)
-            });
-            
-            this.animationId = requestAnimationFrame(animate);
-        };
+        const currentX = ballX + currentVx * time;
+        const currentY = ballY + vy * time - 0.5 * this.gravity * time * time; // Parabola corretta
         
-        animate();
-    }
+        // Disegna palla
+        this.ctx.fillStyle = '#FF8C00';
+        this.ctx.beginPath();
+        this.ctx.arc(currentX, currentY, 12, 0, 2 * Math.PI);
+        this.ctx.fill();
+        
+        // VETTORE FORZA APPLICATA (verso l'alto e avanti) - BLU
+        this.ctx.strokeStyle = 'blue';
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(currentX, currentY);
+        this.ctx.lineTo(currentX + vx/3, currentY - Math.abs(vy)/3); // Verso l'alto
+        this.ctx.stroke();
+        
+        // Freccia forza applicata
+        this.ctx.fillStyle = 'blue';
+        this.ctx.beginPath();
+        this.ctx.moveTo(currentX + vx/3, currentY - Math.abs(vy)/3);
+        this.ctx.lineTo(currentX + vx/3 - 5, currentY - Math.abs(vy)/3 + 5);
+        this.ctx.lineTo(currentX + vx/3 + 5, currentY - Math.abs(vy)/3 + 5);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // VETTORE PESO (sempre verso il basso) - ROSSO
+        this.ctx.strokeStyle = 'red';
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(currentX, currentY);
+        this.ctx.lineTo(currentX, currentY + this.gravity * 3); // Verso il basso
+        this.ctx.stroke();
+        
+        // Freccia peso
+        this.ctx.fillStyle = 'red';
+        this.ctx.beginPath();
+        this.ctx.moveTo(currentX, currentY + this.gravity * 3);
+        this.ctx.lineTo(currentX - 5, currentY + this.gravity * 3 - 5);
+        this.ctx.lineTo(currentX + 5, currentY + this.gravity * 3 - 5);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Reset quando esce dal campo o tocca terra
+        if(currentX > this.canvas.width || currentY > 400 || currentY < 0) {
+            time = 0;
+        }
+        
+        this.updateResults({
+            gravita: this.gravity.toFixed(1),
+            distanza: this.shootDistance.toFixed(1),
+            velocita_iniziale: initialSpeed.toFixed(1),
+            resistenza_aria: this.airResistance.toFixed(3),
+            angolo: (optimalAngle * 180 / Math.PI).toFixed(1),
+            altezza_attuale: (ballY - currentY).toFixed(1)
+        });
+        
+        this.animationId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+}
 
     simulateCyclingGravity() {
-        let pedalForce = 50; // Forza base pedalata
-        let requiredForce = pedalForce * (this.gravity / 9.8); // Forza necessaria
-        let speed = Math.max(0, pedalForce - requiredForce);
+    let pedalForce = 50; // Forza base pedalata
+    let requiredForce = pedalForce * (this.gravity / 9.8); // Forza necessaria
+    let efficiency = Math.max(0, (pedalForce - requiredForce) / pedalForce * 100);
+    
+    const animate = () => {
+        this.drawSportEnvironment();
         
-        const animate = () => {
-            this.drawSportEnvironment();
-            
-            // Mostra forza necessaria per pedalare
-            this.ctx.fillStyle = 'red';
-            this.ctx.font = '16px Arial';
-            this.ctx.fillText(`Forza necessaria: ${requiredForce.toFixed(1)}N`, 200, 50);
-            this.ctx.fillText(`Velocità risultante: ${speed.toFixed(1)} km/h`, 200, 70);
-            
-            // Vettore forza peso sulla bici
-            this.ctx.strokeStyle = 'red';
-            this.ctx.lineWidth = 4;
-            this.ctx.beginPath();
-            this.ctx.moveTo(100, 320);
-            this.ctx.lineTo(100, 320 + this.gravity * 3);
-            this.ctx.stroke();
-            
-            // Freccia
-            this.ctx.beginPath();
-            this.ctx.moveTo(100, 320 + this.gravity * 3);
-            this.ctx.lineTo(95, 320 + this.gravity * 3 - 5);
-            this.ctx.lineTo(105, 320 + this.gravity * 3 - 5);
-            this.ctx.closePath();
-            this.ctx.fill();
-            
-            this.updateResults({
-                gravita: this.gravity.toFixed(1),
-                forza_pedalata: pedalForce.toFixed(1),
-                forza_necessaria: requiredForce.toFixed(1),
-                velocita: speed.toFixed(1),
-                pianeta: this.gravity === 9.8 ? 'Terra' : this.gravity === 3.7 ? 'Marte' : 'Giove'
-            });
-            
-            this.animationId = requestAnimationFrame(animate);
-        };
+        // BICICLETTA FERMA - Solo visualizzazione forze
+        const bikeX = 100;
+        const bikeY = 340;
         
-        animate();
-    }
+        // VETTORE FORZA PESO (verso il basso) - ROSSO
+        this.ctx.strokeStyle = 'red';
+        this.ctx.lineWidth = 5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(bikeX, bikeY - 20); // Dal centro bici
+        this.ctx.lineTo(bikeX, bikeY - 20 + this.gravity * 4);
+        this.ctx.stroke();
+        
+        // Freccia peso
+        this.ctx.fillStyle = 'red';
+        this.ctx.beginPath();
+        this.ctx.moveTo(bikeX, bikeY - 20 + this.gravity * 4);
+        this.ctx.lineTo(bikeX - 6, bikeY - 20 + this.gravity * 4 - 8);
+        this.ctx.lineTo(bikeX + 6, bikeY - 20 + this.gravity * 4 - 8);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // VETTORE FORZA PEDALATA (orizzontale) - BLU
+        this.ctx.strokeStyle = 'blue';
+        this.ctx.lineWidth = 5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(bikeX, bikeY - 5); // Dai pedali
+        this.ctx.lineTo(bikeX + requiredForce * 2, bikeY - 5);
+        this.ctx.stroke();
+        
+        // Freccia pedalata
+        this.ctx.fillStyle = 'blue';
+        this.ctx.beginPath();
+        this.ctx.moveTo(bikeX + requiredForce * 2, bikeY - 5);
+        this.ctx.lineTo(bikeX + requiredForce * 2 - 8, bikeY - 5 - 6);
+        this.ctx.lineTo(bikeX + requiredForce * 2 - 8, bikeY - 5 + 6);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // ETICHETTE FORZE
+        this.ctx.fillStyle = 'red';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.fillText(`Peso: ${(this.gravity * 7).toFixed(0)}N`, bikeX + 20, bikeY + 10);
+        
+        this.ctx.fillStyle = 'blue';
+        this.ctx.fillText(`Pedalata: ${requiredForce.toFixed(0)}N`, bikeX + 20, bikeY + 30);
+        
+        // INFORMAZIONI AGGIUNTIVE
+        this.ctx.fillStyle = 'black';
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText(`Efficienza: ${efficiency.toFixed(1)}%`, 200, 50);
+        
+        let planetName = 'Terra';
+        if(this.gravity === 3.7) planetName = 'Marte';
+        else if(this.gravity === 24.8) planetName = 'Giove';
+        
+        this.ctx.fillText(`Pianeta: ${planetName}`, 200, 70);
+        
+        this.updateResults({
+            gravita: this.gravity.toFixed(1),
+            peso_ciclista: (this.gravity * 7).toFixed(1), // 70kg ciclista
+            forza_pedalata_necessaria: requiredForce.toFixed(1),
+            efficienza: efficiency.toFixed(1),
+            pianeta: planetName,
+            difficolta: efficiency > 80 ? 'Facile' : efficiency > 50 ? 'Medio' : 'Difficile'
+        });
+        
+        this.animationId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+}
 
     simulateFootballFriction() {
         let position = this.canvas.width/2;
